@@ -19,6 +19,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { AdCopy, Brief, SelectedAsset } from '../types/brief';
 import { RELAY_MESSAGING_RULES } from '../prompts/messagingRules';
+import { RELAY_PRODUCT } from '../prompts/relayProduct';
 
 export const RELAY_MODEL = 'claude-opus-4-8';
 const MAX_OUTPUT_TOKENS = 1500;
