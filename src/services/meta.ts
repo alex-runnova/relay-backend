@@ -1,0 +1,216 @@
+/**
+ * Meta Ads API service (Panel 4 submission).
+ *
+ * Creates a PAUSED ad in the connected ad account via the Graph API. Phase 1
+ * is Meta-only. Auth uses a long-lived token (META_ACCESS_TOKEN) against the
+ * account in META_AD_ACCOUNT_ID.
+ *
+ * Ad creation on Meta is a 4-step sequence: campaign → ad set → ad creative →
+ * ad. Every entity is created PAUSED so nothing spends until a human resumes
+ * it in Business Manager.
+ *
+ * Pure helpers (objective mapping, budget conversion, account-id normalization,
+ * error parsing) are exported for unit testing without network access.
+ */
+
+import { Brief, CampaignObjective, MetaSubmission } from '../types/brief';
+
+const GRAPH_VERSION = 'v21.0';
+const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
+
+/** Relay campaign objectives → Meta Outcome-based objectives (ODAX). */
+const OBJECTIVE_MAP: Record<CampaignObjective, string> = {
+  AWARENESS: 'OUTCOME_AWARENESS',
+  TRAFFIC: 'OUTCOME_TRAFFIC',
+  ENGAGEMENT: 'OUTCOME_ENGAGEMENT',
+  LEADS: 'OUTCOME_LEADS',
+  CONVERSIONS: 'OUTCOME_SALES',
+};
+
+export function mapObjective(objective: CampaignObjective): string {
+  return OBJECTIVE_MAP[objective];
+}
+
+export function usdToCents(usd: number): number {
+  return Math.round(usd * 100);
+}
+
+/** Ensure the account id carries the Graph API `act_` prefix exactly once. */
+export function normalizeAccountId(id: string): string {
+  const trimmed = id.trim();
+  return trimmed.startsWith('act_') ? trimmed : `act_${trimmed}`;
+}
+
+/** A Meta policy/validation rejection, carrying the surfaced reason. */
+export class MetaApiError extends Error {
+  readonly status: number;
+  readonly metaCode?: number;
+  constructor(message: string, status: number, metaCode?: number) {
+    super(message);
+    this.name = 'MetaApiError';
+    this.status = status;
+    this.metaCode = metaCode;
+  }
+}
+
+/**
+ * Extract the most user-meaningful message from a Graph API error body.
+ * Prefers `error_user_msg` (the policy-rejection reason Meta surfaces to
+ * advertisers) over the generic `message`.
+ */
+export function parseMetaError(body: unknown): { message: string; code?: number } {
+  const err = (body as { error?: Record<string, unknown> })?.error;
+  if (!err) return { message: 'Unknown Meta API error.' };
+  const userMsg = typeof err.error_user_msg === 'string' ? err.error_user_msg : undefined;
+  const message = typeof err.message === 'string' ? err.message : undefined;
+  const title = typeof err.error_user_title === 'string' ? err.error_user_title : undefined;
+  const code = typeof err.code === 'number' ? err.code : undefined;
+  const best = userMsg ? (title ? `${title}: ${userMsg}` : userMsg) : message ?? 'Meta API error.';
+  return { message: best, code };
+}
+
+interface MetaConfig {
+  accessToken: string;
+  accountId: string;
+}
+
+function getConfig(): MetaConfig {
+  const accessToken = process.env.META_ACCESS_TOKEN;
+  const accountIdRaw = process.env.META_AD_ACCOUNT_ID;
+  if (!accessToken) throw new Error('META_ACCESS_TOKEN is not set.');
+  if (!accountIdRaw) throw new Error('META_AD_ACCOUNT_ID is not set.');
+  return { accessToken, accountId: normalizeAccountId(accountIdRaw) };
+}
+
+/** POST to a Graph API edge; throws MetaApiError on a non-OK response. */
+async function graphPost(
+  path: string,
+  params: Record<string, unknown>,
+  accessToken: string,
+): Promise<Record<string, unknown>> {
+  const form = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    form.set(k, typeof v === 'string' ? v : JSON.stringify(v));
+  }
+  form.set('access_token', accessToken);
+
+  const res = await fetch(`${GRAPH_BASE}/${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+  const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) {
+    const { message, code } = parseMetaError(json);
+    throw new MetaApiError(message, res.status, code);
+  }
+  return json;
+}
+
+/**
+ * Create a PAUSED ad for the brief and return the resulting identifiers.
+ *
+ * Targeting is kept to the brief's city plus the US (Phase 1). Meta requires
+ * geo *keys* for precise city targeting; until a city-key lookup is added we
+ * target the country and record the city in the ad name, which is sufficient
+ * for a PAUSED draft that a human reviews before resuming.
+ */
+export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
+  const { accessToken, accountId } = getConfig();
+  const copy = brief.copy;
+  const asset = brief.selected_asset;
+  if (!copy) throw new Error('Brief has no copy to submit.');
+  if (!asset) throw new Error('Brief has no asset to submit.');
+
+  const campaignName = `${brief.brief_name} — ${brief.city}`;
+
+  // 1. Campaign
+  const campaign = await graphPost(
+    `${accountId}/campaigns`,
+    {
+      name: campaignName,
+      objective: mapObjective(brief.objective),
+      status: 'PAUSED',
+      special_ad_categories: [],
+    },
+    accessToken,
+  );
+  const campaignId = String(campaign.id);
+
+  // 2. Ad set (daily budget in cents, targeting)
+  const adSet = await graphPost(
+    `${accountId}/adsets`,
+    {
+      name: `${campaignName} — Ad Set`,
+      campaign_id: campaignId,
+      daily_budget: usdToCents(brief.daily_budget_usd),
+      billing_event: 'IMPRESSIONS',
+      optimization_goal: 'REACH',
+      targeting: { geo_locations: { countries: ['US'] } },
+      status: 'PAUSED',
+    },
+    accessToken,
+  );
+  const adSetId = String(adSet.id);
+
+  // 3. Ad creative
+  const creative = await graphPost(
+    `${accountId}/adcreatives`,
+    {
+      name: `${campaignName} — Creative`,
+      object_story_spec: {
+        link_data: {
+          message: copy.primary_text,
+          name: copy.headline,
+          description: copy.description,
+          picture: asset.file_url,
+          call_to_action: { type: 'LEARN_MORE' },
+        },
+      },
+    },
+    accessToken,
+  );
+  const creativeId = String(creative.id);
+
+  // 4. Ad
+  const ad = await graphPost(
+    `${accountId}/ads`,
+    {
+      name: campaignName,
+      adset_id: adSetId,
+      creative: { creative_id: creativeId },
+      status: 'PAUSED',
+    },
+    accessToken,
+  );
+  const adId = String(ad.id);
+
+  // Best-effort review status (non-fatal if it fails).
+  let reviewStatus = 'PENDING_REVIEW';
+  try {
+    const detail = await fetchAdReviewStatus(adId, accessToken);
+    if (detail) reviewStatus = detail;
+  } catch {
+    /* leave default */
+  }
+
+  return {
+    ad_id: adId,
+    campaign_id: campaignId,
+    review_status: reviewStatus,
+    permalink: `https://business.facebook.com/adsmanager/manage/ads?act=${accountId.replace(
+      'act_',
+      '',
+    )}&selected_ad_ids=${adId}`,
+    submitted_at: new Date().toISOString(),
+  };
+}
+
+async function fetchAdReviewStatus(adId: string, accessToken: string): Promise<string | null> {
+  const res = await fetch(
+    `${GRAPH_BASE}/${adId}?fields=effective_status&access_token=${encodeURIComponent(accessToken)}`,
+  );
+  if (!res.ok) return null;
+  const json = (await res.json()) as { effective_status?: string };
+  return json.effective_status ?? null;
+}

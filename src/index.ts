@@ -10,6 +10,7 @@ import express from 'express';
 import briefsRouter from './routes/briefs';
 import copyRouter from './routes/copy';
 import assetsRouter from './routes/assets';
+import launchRouter from './routes/launch';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/briefs', briefsRouter);
 app.use('/api/briefs', copyRouter);
+app.use('/api/briefs', launchRouter);
 app.use('/api', assetsRouter);
 
 // Fallback 404 for unknown API routes.
