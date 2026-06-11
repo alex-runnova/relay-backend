@@ -5,6 +5,8 @@
  * Sheets, Meta Ads) mount additional routers here as they come online.
  */
 
+import path from 'node:path';
+import fs from 'node:fs';
 import cors from 'cors';
 import express from 'express';
 import briefsRouter from './routes/briefs';
@@ -26,10 +28,21 @@ app.use('/api/briefs', copyRouter);
 app.use('/api/briefs', launchRouter);
 app.use('/api', assetsRouter);
 
-// Fallback 404 for unknown API routes.
-app.use((_req, res) => {
+// 404 for unknown API routes (must precede the SPA fallback).
+app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'Not found.' });
 });
+
+// Serve the built frontend (single Railway service). The dist dir exists in
+// production builds; in dev the frontend runs on Vite and proxies /api here.
+const FRONTEND_DIST = path.join(__dirname, '..', 'frontend', 'dist');
+if (fs.existsSync(FRONTEND_DIST)) {
+  app.use(express.static(FRONTEND_DIST));
+  // SPA fallback: serve index.html for any non-API GET route.
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
+  });
+}
 
 const PORT = Number(process.env.PORT) || 3000;
 

@@ -1,6 +1,11 @@
 node_modules/
 dist/
+frontend/node_modules/
+frontend/dist/
 *.log
 .env
 .env.local
 .DS_Store
+
+# TS build info
+*.tsbuildinfo
