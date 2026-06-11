@@ -114,6 +114,50 @@ function getConfig(): MetaConfig {
   return { accessToken, accountId: normalizeAccountId(accountIdRaw), pageId };
 }
 
+/**
+ * Extract an image hash from a Graph `/adimages` upload response.
+ * Shape: { images: { "<filename>": { hash, url } } }. Returns the first hash.
+ */
+export function parseImageHashResponse(body: unknown): string | null {
+  const images = (body as { images?: Record<string, { hash?: string }> })?.images;
+  if (!images) return null;
+  for (const entry of Object.values(images)) {
+    if (entry?.hash) return entry.hash;
+  }
+  return null;
+}
+
+/**
+ * Upload an image to the ad account by fetching its bytes from `imageUrl` and
+ * POSTing to /adimages, returning the resulting image_hash. Meta creatives are
+ * far more reliable with an uploaded image_hash than a raw picture URL. Returns
+ * null on any failure so the caller can fall back to the URL.
+ */
+export async function uploadAdImage(
+  accountId: string,
+  accessToken: string,
+  imageUrl: string,
+): Promise<string | null> {
+  try {
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) return null;
+    const bytes = Buffer.from(await imgRes.arrayBuffer());
+
+    const form = new FormData();
+    form.set('access_token', accessToken);
+    form.set('source', new Blob([bytes]), 'asset');
+
+    const res = await fetch(`${GRAPH_BASE}/${accountId}/adimages`, {
+      method: 'POST',
+      body: form,
+    });
+    if (!res.ok) return null;
+    return parseImageHashResponse(await res.json().catch(() => ({})));
+  } catch {
+    return null;
+  }
+}
+
 /** POST to a Graph API edge; throws MetaApiError on a non-OK response. */
 async function graphPost(
   path: string,
@@ -188,25 +232,22 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
   const adSetId = String(adSet.id);
 
   // 3. Ad creative (requires page_id + a destination link).
-  // NOTE: `picture` references the image by URL. If Meta rejects URL-based
-  // images for this account, upload the asset first (POST {account}/adimages)
-  // and pass the returned image_hash in link_data instead. This step could not
-  // be validated against the live account during the Meta dry-run.
+  // Prefer an uploaded image_hash (more reliable than a raw picture URL); fall
+  // back to the asset URL if the upload fails.
+  const imageHash = await uploadAdImage(accountId, accessToken, asset.file_url);
+  const linkData: Record<string, unknown> = {
+    link: brief.destination_url,
+    message: copy.primary_text,
+    name: copy.headline,
+    description: copy.description,
+    call_to_action: { type: 'LEARN_MORE' },
+    ...(imageHash ? { image_hash: imageHash } : { picture: asset.file_url }),
+  };
   const creative = await graphPost(
     `${accountId}/adcreatives`,
     {
       name: `${campaignName} — Creative`,
-      object_story_spec: {
-        page_id: pageId,
-        link_data: {
-          link: brief.destination_url,
-          message: copy.primary_text,
-          name: copy.headline,
-          description: copy.description,
-          picture: asset.file_url,
-          call_to_action: { type: 'LEARN_MORE' },
-        },
-      },
+      object_story_spec: { page_id: pageId, link_data: linkData },
     },
     accessToken,
   );

@@ -13,6 +13,7 @@ import briefsRouter from './routes/briefs';
 import copyRouter from './routes/copy';
 import assetsRouter from './routes/assets';
 import launchRouter from './routes/launch';
+import { basicAuth } from './middleware/auth';
 
 const app = express();
 
@@ -22,6 +23,9 @@ app.use(express.json());
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'relay-backend', phase: 1 });
 });
+
+// Opt-in access gate (protects API + SPA). No-op unless RELAY_BASIC_AUTH_* set.
+app.use(basicAuth());
 
 app.use('/api/briefs', briefsRouter);
 app.use('/api/briefs', copyRouter);
