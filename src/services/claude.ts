@@ -170,9 +170,17 @@ export async function draftStrategy(
 ): Promise<StrategyDraft> {
   const anthropic = getClient();
 
-  const system = `You are Relay's paid-media strategist for a Pittsburgh agency. Using Relay's strategy playbooks below, draft three planning fields for a new campaign brief: target_audience, product_description, and key_message.
+  const system = `You are Relay's paid-media strategist for a Pittsburgh agency. You draft three planning fields for a new Relay ad campaign: target_audience, product_description, and key_message. These ads sell Relay itself to local business owners.
 
-Ground your draft in the playbooks — match Relay's positioning, audience framing, and voice. Be specific and local where the playbooks support it. These are editable starting points for a strategist, so be concrete and useful, not generic.
+${RELAY_PRODUCT}
+
+Rules for your draft:
+- product_description must describe RELAY'S actual product (the $99/month creator-content subscription above) — NOT an ad-management or traffic service, and never invent capabilities Relay doesn't have.
+- target_audience is the local business OWNER Relay markets to (independent restaurants, cafés, bars, local food spots) — describe who they are and the marketing/content problem they have.
+- key_message is the single core promise to that owner.
+- Speak to the owner's problem (no time, no content, seats to fill) and Relay's solution (hands-off monthly creator content they own, $99). Do not promise specific customers, diners, or revenue.
+
+Use the strategy playbooks below for voice, positioning, and audience nuance — but the product facts above are authoritative and override anything ambiguous in the playbooks.
 
 Keep each field tight: target_audience and key_message 1-2 sentences; product_description 1-3 sentences.
 
