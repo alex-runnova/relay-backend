@@ -2,20 +2,25 @@
    accent. Deliberately not a generic SaaS template. */
 
 :root {
-  --paper: #f6f4ef;
+  --paper: #fafaf5;
   --card: #ffffff;
-  --ink: #1c1b19;
-  --ink-soft: #55514a;
-  --line: #e2ddd3;
-  --gold: #b9892f;
-  --gold-soft: #f1e6cf;
+  --ink: #16151a;
+  --ink-soft: #5b5766;
+  --line: #e7e4ee;
+  /* Brand: purple accent + lime CTA. --gold kept as an alias = purple so all
+     existing accent rules pick up the brand color without per-rule edits. */
+  --gold: #ab36ee;
+  --gold-soft: #f3e3fd;
+  --cta: #d5ff3d;
+  --cta-ink: #1f2600;
+  --cta-hover: #c6f024;
   --green: #2f7d4f;
   --green-soft: #e2f0e7;
-  --yellow: #b07d12;
-  --yellow-soft: #f8eccb;
+  --yellow: #9a6a00;
+  --yellow-soft: #f6eccf;
   --red: #b3382f;
   --red-soft: #f7e0dd;
-  --shadow: 0 1px 2px rgba(28, 27, 25, 0.06), 0 4px 16px rgba(28, 27, 25, 0.05);
+  --shadow: 0 1px 2px rgba(22, 21, 26, 0.06), 0 4px 16px rgba(22, 21, 26, 0.06);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -82,13 +87,16 @@ a { color: var(--gold); }
 
 /* Buttons */
 .btn {
-  padding: 10px 18px; border-radius: 8px; border: 1px solid var(--ink);
-  background: var(--ink); color: #fff; font-size: 14px; font-weight: 600;
+  padding: 10px 18px; border-radius: 8px; border: 1px solid var(--cta);
+  background: var(--cta); color: var(--cta-ink); font-size: 14px; font-weight: 700;
 }
+.btn:hover:not(:disabled) { background: var(--cta-hover); border-color: var(--cta-hover); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn.secondary { background: transparent; color: var(--ink); }
+.btn.secondary { background: transparent; color: var(--ink); border-color: var(--line); font-weight: 600; }
+.btn.secondary:hover:not(:disabled) { border-color: var(--ink); }
 .btn.gold { background: var(--gold); border-color: var(--gold); color: #fff; }
-.btn.danger { background: var(--red); border-color: var(--red); }
+.btn.gold:hover:not(:disabled) { filter: brightness(1.06); }
+.btn.danger { background: var(--red); border-color: var(--red); color: #fff; }
 
 /* Brief history list */
 .brief-list { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; }
@@ -101,7 +109,7 @@ a { color: var(--gold); }
   border: 1px solid transparent; color: #ece8df; display: flex; flex-direction: column; gap: 4px;
 }
 .brief-item:hover { background: rgba(255,255,255,0.05); }
-.brief-item.active { background: rgba(185,137,47,0.18); border-color: var(--gold); }
+.brief-item.active { background: rgba(171,54,238,0.16); border-color: var(--gold); }
 .brief-item .name { font-size: 14px; font-weight: 600; }
 .brief-item .when { font-size: 11px; color: #9b958a; }
 

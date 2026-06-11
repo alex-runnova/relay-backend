@@ -131,6 +131,103 @@ export async function generateCopy(brief: Brief): Promise<AdCopy> {
  * Coerce Claude's parsed JSON into an AdCopy, tolerating minor shape drift.
  * Exported for unit testing without hitting the API.
  */
+// ---------------------------------------------------------------------------
+// Strategy drafting (Panel 1 AI pre-fill)
+// ---------------------------------------------------------------------------
+
+export interface StrategyDraftInput {
+  brief_name: string;
+  industry: string;
+  city?: string;
+  objective?: string;
+  tone?: string;
+}
+
+export interface StrategyDraft {
+  target_audience: string;
+  product_description: string;
+  key_message: string;
+}
+
+const STRATEGY_JSON_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    target_audience: { type: 'string' },
+    product_description: { type: 'string' },
+    key_message: { type: 'string' },
+  },
+  required: ['target_audience', 'product_description', 'key_message'],
+} as const;
+
+/**
+ * Draft the three strategy fields for a brief, grounded in Relay's strategy
+ * playbooks (the Drive corpus). Returns editable suggestions, not final copy.
+ */
+export async function draftStrategy(
+  input: StrategyDraftInput,
+  strategyCorpus: string,
+): Promise<StrategyDraft> {
+  const anthropic = getClient();
+
+  const system = `You are Relay's paid-media strategist for a Pittsburgh agency. Using Relay's strategy playbooks below, draft three planning fields for a new campaign brief: target_audience, product_description, and key_message.
+
+Ground your draft in the playbooks — match Relay's positioning, audience framing, and voice. Be specific and local where the playbooks support it. These are editable starting points for a strategist, so be concrete and useful, not generic.
+
+Keep each field tight: target_audience and key_message 1-2 sentences; product_description 1-3 sentences.
+
+=== RELAY STRATEGY PLAYBOOKS ===
+${strategyCorpus || '(no playbook documents were available)'}
+=== END PLAYBOOKS ===
+
+Respond with the structured JSON object only.`;
+
+  const userContent = JSON.stringify(
+    {
+      brief_name: input.brief_name,
+      industry: input.industry,
+      city: input.city ?? 'Pittsburgh',
+      objective: input.objective,
+      tone: input.tone,
+    },
+    null,
+    2,
+  );
+
+  const response = await anthropic.messages.create({
+    model: RELAY_MODEL,
+    max_tokens: 900,
+    system,
+    output_config: { format: { type: 'json_schema', schema: STRATEGY_JSON_SCHEMA } },
+    messages: [
+      {
+        role: 'user',
+        content: `Draft the strategy fields for this campaign:\n\n${userContent}`,
+      },
+    ],
+  });
+
+  if (response.stop_reason === 'refusal') {
+    throw new Error('Claude declined to draft strategy for this brief.');
+  }
+  const textBlock = response.content.find((b) => b.type === 'text');
+  if (!textBlock || textBlock.type !== 'text') {
+    throw new Error('Claude returned no text content.');
+  }
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(textBlock.text);
+  } catch {
+    throw new Error('Claude returned malformed JSON.');
+  }
+  const str = (v: unknown) => (typeof v === 'string' ? v : '');
+  return {
+    target_audience: str(parsed.target_audience),
+    product_description: str(parsed.product_description),
+    key_message: str(parsed.key_message),
+  };
+}
+
 export function normalizeCopy(parsed: unknown): AdCopy {
   const obj = (parsed ?? {}) as Record<string, unknown>;
   const str = (v: unknown) => (typeof v === 'string' ? v : '');

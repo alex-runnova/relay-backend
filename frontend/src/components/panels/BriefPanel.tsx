@@ -66,6 +66,7 @@ export default function BriefPanel({ brief, readOnly, onSaved, onNext, toast }: 
   const [form, setForm] = useState<BriefInput>(brief ? toInput(brief) : BLANK);
   const [touched, setTouched] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [drafting, setDrafting] = useState(false);
 
   const errors = useMemo(() => validate(form), [form]);
   const valid = Object.keys(errors).length === 0;
@@ -75,6 +76,30 @@ export default function BriefPanel({ brief, readOnly, onSaved, onNext, toast }: 
 
   const fieldClass = (k: keyof BriefInput) => `field ${touched && errors[k] ? 'invalid' : ''}`;
   const err = (k: keyof BriefInput) => touched && errors[k] && <div className="error">{errors[k]}</div>;
+
+  async function draftStrategy() {
+    if (!form.brief_name.trim()) return;
+    setDrafting(true);
+    try {
+      const d = await api.draftStrategy({
+        brief_name: form.brief_name,
+        industry: form.industry,
+        city: form.city,
+        objective: form.objective,
+        tone: form.tone,
+      });
+      setForm((f) => ({
+        ...f,
+        target_audience: d.target_audience,
+        product_description: d.product_description,
+        key_message: d.key_message,
+      }));
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : 'Could not draft strategy.', true);
+    } finally {
+      setDrafting(false);
+    }
+  }
 
   async function saveAndContinue() {
     setTouched(true);
@@ -148,6 +173,15 @@ export default function BriefPanel({ brief, readOnly, onSaved, onNext, toast }: 
           {err('daily_budget_usd')}
         </div>
       </div>
+
+      {!readOnly && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--gold-soft)', padding: '12px 14px', borderRadius: 8, marginBottom: 18 }}>
+          <button type="button" className="btn gold" onClick={draftStrategy} disabled={!form.brief_name.trim() || drafting} style={{ padding: '8px 14px', whiteSpace: 'nowrap' }}>
+            {drafting ? 'Drafting…' : '✨ Draft with Relay strategy'}
+          </button>
+          <span className="hint">Fills the three fields below from Relay's playbooks, based on Brief Name + Industry. Fully editable after.</span>
+        </div>
+      )}
 
       <div className={fieldClass('target_audience')}>
         <label>Target Audience</label>

@@ -68,6 +68,18 @@ export const api = {
       body: JSON.stringify({ asset_id: assetId }),
     }).then((r) => r.brief),
 
+  draftStrategy: (input: {
+    brief_name: string;
+    industry: string;
+    city?: string;
+    objective?: string;
+    tone?: string;
+  }) =>
+    request<{ draft: { target_audience: string; product_description: string; key_message: string } }>(
+      '/strategy/draft',
+      { method: 'POST', body: JSON.stringify(input) },
+    ).then((r) => r.draft),
+
   generateCopy: (id: string) =>
     request<{ brief: Brief; copy: AdCopy; char_counts: CopyCharCounts }>(
       `/briefs/${id}/generate`,
