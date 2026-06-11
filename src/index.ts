@@ -8,6 +8,7 @@
 import cors from 'cors';
 import express from 'express';
 import briefsRouter from './routes/briefs';
+import copyRouter from './routes/copy';
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/briefs', briefsRouter);
+app.use('/api/briefs', copyRouter);
 
 // Fallback 404 for unknown API routes.
 app.use((_req, res) => {
