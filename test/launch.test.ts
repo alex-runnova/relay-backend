@@ -4,6 +4,8 @@ import { Brief } from '../src/types/brief';
 import { checkReadiness } from '../src/types/readiness';
 import {
   mapObjective,
+  mapOptimization,
+  metaSpecialAdCategories,
   normalizeAccountId,
   parseMetaError,
   usdToCents,
@@ -24,6 +26,7 @@ function readyBrief(): Brief {
     target_audience: 'Locals',
     product_description: 'Leather goods',
     key_message: 'Built to last',
+    destination_url: 'https://example.com/shop',
     daily_budget_usd: 25,
     start_date: '2026-07-01',
     end_date: '2026-07-31',
@@ -140,4 +143,16 @@ test('parseMetaError prefers error_user_msg', () => {
 
 test('parseMetaError falls back to message', () => {
   assert.equal(parseMetaError({ error: { message: 'Invalid budget' } }).message, 'Invalid budget');
+});
+
+test('metaSpecialAdCategories maps real estate to HOUSING only', () => {
+  assert.deepEqual(metaSpecialAdCategories('real estate'), ['HOUSING']);
+  assert.deepEqual(metaSpecialAdCategories('healthcare'), []); // not a Meta SAC
+  assert.deepEqual(metaSpecialAdCategories('retail'), []);
+});
+
+test('mapOptimization returns a setup-free combo per objective', () => {
+  assert.deepEqual(mapOptimization('AWARENESS'), { optimization_goal: 'REACH', billing_event: 'IMPRESSIONS' });
+  assert.deepEqual(mapOptimization('TRAFFIC'), { optimization_goal: 'LINK_CLICKS', billing_event: 'IMPRESSIONS' });
+  assert.equal(mapOptimization('CONVERSIONS').optimization_goal, 'LINK_CLICKS');
 });

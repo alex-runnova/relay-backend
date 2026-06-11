@@ -13,7 +13,7 @@
  * error parsing) are exported for unit testing without network access.
  */
 
-import { Brief, CampaignObjective, MetaSubmission } from '../types/brief';
+import { Brief, CampaignObjective, Industry, MetaSubmission } from '../types/brief';
 
 const GRAPH_VERSION = 'v21.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
@@ -29,6 +29,35 @@ const OBJECTIVE_MAP: Record<CampaignObjective, string> = {
 
 export function mapObjective(objective: CampaignObjective): string {
   return OBJECTIVE_MAP[objective];
+}
+
+/**
+ * Per-objective ad-set optimization. Phase 1 keeps every objective on a
+ * setup-free combo: billing on impressions, optimizing for a goal that needs
+ * no pixel or on-Meta lead form. CONVERSIONS/LEADS drive to the landing page
+ * (LINK_CLICKS) rather than requiring a pixel or instant form — noted as a
+ * Phase 1 simplification.
+ */
+const OPTIMIZATION_MAP: Record<CampaignObjective, { optimization_goal: string; billing_event: string }> = {
+  AWARENESS: { optimization_goal: 'REACH', billing_event: 'IMPRESSIONS' },
+  TRAFFIC: { optimization_goal: 'LINK_CLICKS', billing_event: 'IMPRESSIONS' },
+  ENGAGEMENT: { optimization_goal: 'POST_ENGAGEMENT', billing_event: 'IMPRESSIONS' },
+  LEADS: { optimization_goal: 'LINK_CLICKS', billing_event: 'IMPRESSIONS' },
+  CONVERSIONS: { optimization_goal: 'LINK_CLICKS', billing_event: 'IMPRESSIONS' },
+};
+
+export function mapOptimization(objective: CampaignObjective) {
+  return OPTIMIZATION_MAP[objective];
+}
+
+/**
+ * Map a Relay industry to Meta's Special Ad Categories enum. Only a subset of
+ * Relay industries map to a real Meta SAC: `real estate` → HOUSING. Healthcare
+ * carries Relay's internal SPECIAL_AD_CATEGORY warning but is NOT a Meta SAC,
+ * so it submits with no category (sending an invalid value would 400).
+ */
+export function metaSpecialAdCategories(industry: Industry): string[] {
+  return industry === 'real estate' ? ['HOUSING'] : [];
 }
 
 export function usdToCents(usd: number): number {
@@ -72,14 +101,17 @@ export function parseMetaError(body: unknown): { message: string; code?: number 
 interface MetaConfig {
   accessToken: string;
   accountId: string;
+  pageId: string;
 }
 
 function getConfig(): MetaConfig {
   const accessToken = process.env.META_ACCESS_TOKEN;
   const accountIdRaw = process.env.META_AD_ACCOUNT_ID;
+  const pageId = process.env.META_PAGE_ID;
   if (!accessToken) throw new Error('META_ACCESS_TOKEN is not set.');
   if (!accountIdRaw) throw new Error('META_AD_ACCOUNT_ID is not set.');
-  return { accessToken, accountId: normalizeAccountId(accountIdRaw) };
+  if (!pageId) throw new Error('META_PAGE_ID is not set (required for the ad creative).');
+  return { accessToken, accountId: normalizeAccountId(accountIdRaw), pageId };
 }
 
 /** POST to a Graph API edge; throws MetaApiError on a non-OK response. */
@@ -116,13 +148,15 @@ async function graphPost(
  * for a PAUSED draft that a human reviews before resuming.
  */
 export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
-  const { accessToken, accountId } = getConfig();
+  const { accessToken, accountId, pageId } = getConfig();
   const copy = brief.copy;
   const asset = brief.selected_asset;
   if (!copy) throw new Error('Brief has no copy to submit.');
   if (!asset) throw new Error('Brief has no asset to submit.');
+  if (!brief.destination_url) throw new Error('Brief has no destination URL to submit.');
 
   const campaignName = `${brief.brief_name} — ${brief.city}`;
+  const opt = mapOptimization(brief.objective);
 
   // 1. Campaign
   const campaign = await graphPost(
@@ -131,21 +165,21 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
       name: campaignName,
       objective: mapObjective(brief.objective),
       status: 'PAUSED',
-      special_ad_categories: [],
+      special_ad_categories: metaSpecialAdCategories(brief.industry),
     },
     accessToken,
   );
   const campaignId = String(campaign.id);
 
-  // 2. Ad set (daily budget in cents, targeting)
+  // 2. Ad set (daily budget in cents, objective-aware optimization, targeting)
   const adSet = await graphPost(
     `${accountId}/adsets`,
     {
       name: `${campaignName} — Ad Set`,
       campaign_id: campaignId,
       daily_budget: usdToCents(brief.daily_budget_usd),
-      billing_event: 'IMPRESSIONS',
-      optimization_goal: 'REACH',
+      billing_event: opt.billing_event,
+      optimization_goal: opt.optimization_goal,
       targeting: { geo_locations: { countries: ['US'] } },
       status: 'PAUSED',
     },
@@ -153,13 +187,15 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
   );
   const adSetId = String(adSet.id);
 
-  // 3. Ad creative
+  // 3. Ad creative (requires page_id + a destination link)
   const creative = await graphPost(
     `${accountId}/adcreatives`,
     {
       name: `${campaignName} — Creative`,
       object_story_spec: {
+        page_id: pageId,
         link_data: {
+          link: brief.destination_url,
           message: copy.primary_text,
           name: copy.headline,
           description: copy.description,

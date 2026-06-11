@@ -110,6 +110,7 @@ export interface BriefInput {
   target_audience: string;
   product_description: string;
   key_message: string;
+  destination_url: string; // click-through URL for the Meta link ad
   daily_budget_usd: number; // min 5
   start_date: string; // ISO date (YYYY-MM-DD)
   end_date: string; // ISO date (YYYY-MM-DD)

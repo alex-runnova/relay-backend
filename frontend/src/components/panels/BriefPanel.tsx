@@ -29,14 +29,15 @@ const BLANK: BriefInput = {
   target_audience: '',
   product_description: '',
   key_message: '',
+  destination_url: '',
   daily_budget_usd: MIN_DAILY_BUDGET_USD,
   start_date: '',
   end_date: '',
 };
 
 function toInput(brief: Brief): BriefInput {
-  const { brief_name, owner, industry, city, objective, tone, target_audience, product_description, key_message, daily_budget_usd, start_date, end_date } = brief;
-  return { brief_name, owner, industry, city, objective, tone, target_audience, product_description, key_message, daily_budget_usd, start_date, end_date };
+  const { brief_name, owner, industry, city, objective, tone, target_audience, product_description, key_message, destination_url, daily_budget_usd, start_date, end_date } = brief;
+  return { brief_name, owner, industry, city, objective, tone, target_audience, product_description, key_message, destination_url, daily_budget_usd, start_date, end_date };
 }
 
 /** Client-side mirror of the backend brief validation. */
@@ -50,6 +51,8 @@ function validate(v: BriefInput): Errors {
   req('target_audience', 'Target Audience');
   req('product_description', 'Product/Service Description');
   req('key_message', 'Key Message');
+  if (!String(v.destination_url ?? '').trim()) e.destination_url = 'Destination URL is required.';
+  else if (!/^https?:\/\/.+\..+/.test(v.destination_url)) e.destination_url = 'Must be a valid http(s) URL.';
   if (!String(v.city ?? '').trim()) e.city = 'City is required.';
   if (!Number.isFinite(v.daily_budget_usd)) e.daily_budget_usd = 'Daily Budget is required.';
   else if (v.daily_budget_usd < MIN_DAILY_BUDGET_USD) e.daily_budget_usd = `Must be at least $${MIN_DAILY_BUDGET_USD}/day.`;
@@ -162,6 +165,12 @@ export default function BriefPanel({ brief, readOnly, onSaved, onNext, toast }: 
         <label>Key Message</label>
         <textarea value={form.key_message} disabled={readOnly} onChange={(e) => set('key_message', e.target.value)} />
         {err('key_message')}
+      </div>
+
+      <div className={fieldClass('destination_url')}>
+        <label>Destination URL <span className="hint">where the ad clicks through to</span></label>
+        <input type="url" placeholder="https://" value={form.destination_url} disabled={readOnly} onChange={(e) => set('destination_url', e.target.value)} />
+        {err('destination_url')}
       </div>
 
       <div className="grid-2">

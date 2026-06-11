@@ -77,6 +77,7 @@ export interface BriefInput {
   target_audience: string;
   product_description: string;
   key_message: string;
+  destination_url: string;
   daily_budget_usd: number;
   start_date: string;
   end_date: string;

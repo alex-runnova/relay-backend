@@ -20,6 +20,7 @@ const validBrief = {
   target_audience: 'Local shoppers 25-45',
   product_description: 'Handmade leather goods',
   key_message: 'Built to last a lifetime',
+  destination_url: 'https://example.com/shop',
   daily_budget_usd: 25,
   start_date: '2026-07-01',
   end_date: '2026-07-31',
@@ -62,6 +63,13 @@ test('rejects end date before start date', async () => {
   assert.equal(res.status, 422);
   const { errors } = await res.json();
   assert.ok(errors.some((e: { field: string }) => e.field === 'end_date'));
+});
+
+test('rejects a malformed destination URL', async () => {
+  const res = await post('/api/briefs', { ...validBrief, destination_url: 'not-a-url' });
+  assert.equal(res.status, 422);
+  const { errors } = await res.json();
+  assert.ok(errors.some((e: { field: string }) => e.field === 'destination_url'));
 });
 
 test('defaults city to Pittsburgh when omitted', async () => {

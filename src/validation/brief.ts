@@ -46,6 +46,7 @@ export function normalizeBriefInput(body: Record<string, unknown>): BriefInput {
     product_description:
       typeof body.product_description === 'string' ? body.product_description.trim() : '',
     key_message: typeof body.key_message === 'string' ? body.key_message.trim() : '',
+    destination_url: typeof body.destination_url === 'string' ? body.destination_url.trim() : '',
     daily_budget_usd:
       typeof body.daily_budget_usd === 'number'
         ? body.daily_budget_usd
@@ -86,6 +87,12 @@ export function validateBriefInput(input: BriefInput): FieldError[] {
   }
   if (!isNonEmptyString(input.key_message)) {
     err('key_message', 'Key Message is required.');
+  }
+
+  if (!isNonEmptyString(input.destination_url)) {
+    err('destination_url', 'Destination URL is required.');
+  } else if (!/^https?:\/\/.+\..+/.test(input.destination_url)) {
+    err('destination_url', 'Destination URL must be a valid http(s) URL.');
   }
 
   if (!Number.isFinite(input.daily_budget_usd)) {

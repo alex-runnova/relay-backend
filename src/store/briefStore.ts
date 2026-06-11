@@ -7,9 +7,45 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { Brief, BriefInput } from '../types/brief';
 
 const briefs = new Map<string, Brief>();
+
+/**
+ * Opt-in flat-file persistence. When BRIEFS_DB_PATH is set (point it at a
+ * mounted Railway volume so it survives redeploys), briefs are loaded on boot
+ * and written after every mutation. Unset (e.g. in tests) → pure in-memory.
+ *
+ * Persisting matters for correctness, not just convenience: the Meta
+ * duplicate-submission guard relies on a stored ad_id, which would reset on
+ * restart without this.
+ */
+const DB_PATH = process.env.BRIEFS_DB_PATH;
+
+function loadFromDisk(): void {
+  if (!DB_PATH || !fs.existsSync(DB_PATH)) return;
+  try {
+    const raw = fs.readFileSync(DB_PATH, 'utf8');
+    const list = JSON.parse(raw) as Brief[];
+    for (const b of list) briefs.set(b.id, b);
+  } catch {
+    // Corrupt/unreadable file: start empty rather than crash the service.
+  }
+}
+
+function persist(): void {
+  if (!DB_PATH) return;
+  try {
+    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+    fs.writeFileSync(DB_PATH, JSON.stringify([...briefs.values()], null, 2));
+  } catch {
+    // Persistence failure must not take down a request; log-and-continue.
+  }
+}
+
+loadFromDisk();
 
 function now(): string {
   return new Date().toISOString();
@@ -26,6 +62,7 @@ export function createBrief(input: BriefInput): Brief {
     last_modified: timestamp,
   };
   briefs.set(brief.id, brief);
+  persist();
   return brief;
 }
 
@@ -56,6 +93,7 @@ export function updateBrief(id: string, patch: Partial<Brief>): Brief | undefine
     last_modified: now(),
   };
   briefs.set(id, updated);
+  persist();
   return updated;
 }
 
@@ -79,11 +117,14 @@ export function cloneBrief(id: string): Brief | undefined {
     last_modified: timestamp,
   };
   briefs.set(clone.id, clone);
+  persist();
   return clone;
 }
 
 export function deleteBrief(id: string): boolean {
-  return briefs.delete(id);
+  const ok = briefs.delete(id);
+  if (ok) persist();
+  return ok;
 }
 
 /** Test/dev helper — wipes all briefs. */
