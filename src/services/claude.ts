@@ -75,6 +75,7 @@ function briefForPrompt(brief: Brief, asset?: SelectedAsset) {
     target_audience: brief.target_audience,
     product_description: brief.product_description,
     key_message: brief.key_message,
+    messaging_angle: brief.messaging_angle ?? null,
     selected_asset: asset
       ? {
           asset_name: asset.asset_name,

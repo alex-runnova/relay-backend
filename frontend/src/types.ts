@@ -32,6 +32,14 @@ export type Tone = (typeof TONES)[number];
 
 export type BriefStatus = 'draft' | 'ready_for_meta' | 'submitted';
 
+export const MESSAGING_ANGLES = ['social_proof', 'time_relief', 'value'] as const;
+export type MessagingAngle = (typeof MESSAGING_ANGLES)[number];
+export const MESSAGING_ANGLE_LABELS: Record<MessagingAngle, string> = {
+  social_proof: 'Your peers are already doing this',
+  time_relief: "You don't have time. We do",
+  value: 'Easier & cheaper than you think',
+};
+
 export const COPY_LIMITS = { headline: 40, primary_text: 125, description: 30 } as const;
 export const MIN_DAILY_BUDGET_USD = 5;
 
@@ -77,6 +85,7 @@ export interface BriefInput {
   target_audience: string;
   product_description: string;
   key_message: string;
+  messaging_angle?: MessagingAngle;
   destination_url: string;
   daily_budget_usd: number;
   start_date: string;

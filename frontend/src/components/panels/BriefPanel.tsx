@@ -4,6 +4,8 @@ import {
   BriefInput,
   CAMPAIGN_OBJECTIVES,
   INDUSTRIES,
+  MESSAGING_ANGLE_LABELS,
+  MESSAGING_ANGLES,
   MIN_DAILY_BUDGET_USD,
   TONES,
 } from '../../types';
@@ -29,6 +31,7 @@ const BLANK: BriefInput = {
   target_audience: '',
   product_description: '',
   key_message: '',
+  messaging_angle: undefined,
   destination_url: '',
   daily_budget_usd: MIN_DAILY_BUDGET_USD,
   start_date: '',
@@ -36,8 +39,8 @@ const BLANK: BriefInput = {
 };
 
 function toInput(brief: Brief): BriefInput {
-  const { brief_name, owner, industry, city, objective, tone, target_audience, product_description, key_message, destination_url, daily_budget_usd, start_date, end_date } = brief;
-  return { brief_name, owner, industry, city, objective, tone, target_audience, product_description, key_message, destination_url, daily_budget_usd, start_date, end_date };
+  const { brief_name, owner, industry, city, objective, tone, target_audience, product_description, key_message, messaging_angle, destination_url, daily_budget_usd, start_date, end_date } = brief;
+  return { brief_name, owner, industry, city, objective, tone, target_audience, product_description, key_message, messaging_angle, destination_url, daily_budget_usd, start_date, end_date };
 }
 
 /** Client-side mirror of the backend brief validation. */
@@ -201,8 +204,17 @@ export default function BriefPanel({ brief, readOnly, onSaved, onNext, toast }: 
         {err('key_message')}
       </div>
 
+      <div className="field">
+        <label>Messaging Angle <span className="hint">optional — steers the copy; pair with its landing page below</span></label>
+        <select value={form.messaging_angle ?? ''} disabled={readOnly}
+          onChange={(e) => set('messaging_angle', (e.target.value || undefined) as BriefInput['messaging_angle'])}>
+          <option value="">Let Relay choose the best fit</option>
+          {MESSAGING_ANGLES.map((a) => <option key={a} value={a}>{MESSAGING_ANGLE_LABELS[a]}</option>)}
+        </select>
+      </div>
+
       <div className={fieldClass('destination_url')}>
-        <label>Destination URL <span className="hint">where the ad clicks through to</span></label>
+        <label>Destination URL <span className="hint">where the ad clicks through to (this angle's landing page)</span></label>
         <input type="url" placeholder="https://" value={form.destination_url} disabled={readOnly} onChange={(e) => set('destination_url', e.target.value)} />
         {err('destination_url')}
       </div>

@@ -13,6 +13,8 @@ import {
   CITY_DEFAULT,
   INDUSTRIES,
   Industry,
+  MESSAGING_ANGLES,
+  MessagingAngle,
   MIN_DAILY_BUDGET_USD,
   TONES,
   Tone,
@@ -46,6 +48,9 @@ export function normalizeBriefInput(body: Record<string, unknown>): BriefInput {
     product_description:
       typeof body.product_description === 'string' ? body.product_description.trim() : '',
     key_message: typeof body.key_message === 'string' ? body.key_message.trim() : '',
+    messaging_angle: MESSAGING_ANGLES.includes(body.messaging_angle as MessagingAngle)
+      ? (body.messaging_angle as MessagingAngle)
+      : undefined,
     destination_url: typeof body.destination_url === 'string' ? body.destination_url.trim() : '',
     daily_budget_usd:
       typeof body.daily_budget_usd === 'number'

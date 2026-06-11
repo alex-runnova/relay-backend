@@ -42,6 +42,20 @@ export const TONES = [
 export type Tone = (typeof TONES)[number];
 
 /**
+ * The three acquisition messaging angles from the creative brief. Each drives
+ * its own landing page and steers the generated copy. Optional on a brief —
+ * when unset, Claude picks the best-fit angle.
+ */
+export const MESSAGING_ANGLES = ['social_proof', 'time_relief', 'value'] as const;
+export type MessagingAngle = (typeof MESSAGING_ANGLES)[number];
+
+export const MESSAGING_ANGLE_LABELS: Record<MessagingAngle, string> = {
+  social_proof: 'Your peers are already doing this',
+  time_relief: "You don't have time. We do",
+  value: 'Easier & cheaper than you think',
+};
+
+/**
  * Brief lifecycle. A brief always starts as `draft`. It becomes
  * `ready_for_meta` once Panel 4's launch-readiness checks pass, and
  * `submitted` once a Meta ad has been created. `submitted` is terminal and
@@ -110,6 +124,7 @@ export interface BriefInput {
   target_audience: string;
   product_description: string;
   key_message: string;
+  messaging_angle?: MessagingAngle; // optional acquisition angle (drives copy + landing page)
   destination_url: string; // click-through URL for the Meta link ad
   daily_budget_usd: number; // min 5
   start_date: string; // ISO date (YYYY-MM-DD)
