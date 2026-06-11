@@ -187,7 +187,11 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
   );
   const adSetId = String(adSet.id);
 
-  // 3. Ad creative (requires page_id + a destination link)
+  // 3. Ad creative (requires page_id + a destination link).
+  // NOTE: `picture` references the image by URL. If Meta rejects URL-based
+  // images for this account, upload the asset first (POST {account}/adimages)
+  // and pass the returned image_hash in link_data instead. This step could not
+  // be validated against the live account during the Meta dry-run.
   const creative = await graphPost(
     `${accountId}/adcreatives`,
     {
