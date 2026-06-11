@@ -2,6 +2,40 @@ import { useEffect, useState } from 'react';
 import { AssetLibraryItem, Brief } from '../../types';
 import { ApiError, api } from '../../api';
 
+/**
+ * Google Drive no longer serves `uc?export=view` links to hotlinked <img>
+ * tags. Convert any Drive URL to the thumbnail endpoint, which does render.
+ * Returns null for non-Drive URLs (e.g. Instagram/TikTok video links), which
+ * have no usable still thumbnail.
+ */
+function driveThumbnail(url: string | undefined): string | null {
+  if (!url || !url.includes('drive.google.com')) return null;
+  const m = url.match(/(?:\/d\/|[?&]id=)([a-zA-Z0-9_-]+)/);
+  return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w640` : null;
+}
+
+/** Asset card image with Drive-thumbnail support and a graceful fallback. */
+function AssetThumb({ asset }: { asset: AssetLibraryItem }) {
+  const [failed, setFailed] = useState(false);
+  const thumb = driveThumbnail(asset.thumbnail_url || asset.file_url);
+  if (thumb && !failed) {
+    return (
+      <img
+        className="thumb"
+        src={thumb}
+        alt={asset.asset_name}
+        loading="lazy"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div className="thumb" style={{ display: 'grid', placeItems: 'center', color: 'var(--ink-soft)', textAlign: 'center', padding: 8 }}>
+      {asset.asset_type === 'video' ? '🎬 video' : asset.asset_type || 'image'}
+    </div>
+  );
+}
+
 interface Props {
   brief: Brief;
   readOnly: boolean;
@@ -78,13 +112,7 @@ export default function AssetPanel({ brief, readOnly, onSelected, onNext, onBack
             onClick={() => choose(a)}
             style={{ opacity: selecting && selecting !== a.asset_id ? 0.6 : 1 }}
           >
-            {a.thumbnail_url ? (
-              <img className="thumb" src={a.thumbnail_url} alt={a.asset_name} />
-            ) : (
-              <div className="thumb" style={{ display: 'grid', placeItems: 'center', color: 'var(--ink-soft)' }}>
-                {a.asset_type}
-              </div>
-            )}
+            <AssetThumb asset={a} />
             <div className="body">
               <div className="nm">{a.asset_name}</div>
               <div className="tags">
