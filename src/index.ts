@@ -20,8 +20,41 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+/**
+ * Presence-only view of config the running container sees. Booleans + a couple
+ * of non-secret resolved values (sheet range, service-account email) — never
+ * secret values. Used to debug deploys without exposing credentials.
+ */
+function configPresence() {
+  const present = (k: string) => Boolean(process.env[k] && process.env[k]!.trim());
+  let serviceAccountEmail: string | null = null;
+  if (present('GOOGLE_SERVICE_ACCOUNT_KEY')) {
+    try {
+      const json = JSON.parse(
+        Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!, 'base64').toString('utf8'),
+      );
+      serviceAccountEmail = json.client_email ?? '(no client_email in key)';
+    } catch {
+      serviceAccountEmail = '(GOOGLE_SERVICE_ACCOUNT_KEY not valid base64 JSON)';
+    }
+  }
+  return {
+    ANTHROPIC_API_KEY: present('ANTHROPIC_API_KEY'),
+    GOOGLE_SERVICE_ACCOUNT_KEY: present('GOOGLE_SERVICE_ACCOUNT_KEY'),
+    ASSET_SHEET_ID: present('ASSET_SHEET_ID'),
+    CAMPAIGN_LOG_SHEET_ID: present('CAMPAIGN_LOG_SHEET_ID'),
+    META_ACCESS_TOKEN: present('META_ACCESS_TOKEN'),
+    META_AD_ACCOUNT_ID: present('META_AD_ACCOUNT_ID'),
+    META_PAGE_ID: present('META_PAGE_ID'),
+    asset_sheet_range: process.env.ASSET_SHEET_RANGE || '(default A:H)',
+    access_gate_enabled: present('RELAY_BASIC_AUTH_USER') && present('RELAY_BASIC_AUTH_PASS'),
+    persistence_path: process.env.BRIEFS_DB_PATH || '(in-memory only)',
+    service_account_email: serviceAccountEmail,
+  };
+}
+
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'relay-backend', phase: 1 });
+  res.json({ status: 'ok', service: 'relay-backend', phase: 1, config: configPresence() });
 });
 
 // Opt-in access gate (protects API + SPA). No-op unless RELAY_BASIC_AUTH_* set.
