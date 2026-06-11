@@ -16,7 +16,9 @@ import {
 } from '../types/asset';
 
 const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
-const ASSET_RANGE = 'A:H'; // 8 columns per the Asset Library schema
+// Override via env if the data lives on a named tab, e.g. "Assets!A:H".
+const ASSET_RANGE = process.env.ASSET_SHEET_RANGE || 'A:H';
+const CAMPAIGN_LOG_RANGE = process.env.CAMPAIGN_LOG_RANGE || 'A:J';
 const CACHE_TTL_MS = 60_000;
 
 let auth: GoogleAuth | null = null;
@@ -115,7 +117,7 @@ export async function appendCampaignLog(row: CampaignLogRow): Promise<void> {
   const sheetId = requireSheetId('CAMPAIGN_LOG_SHEET_ID');
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
     sheetId,
-  )}/values/${encodeURIComponent('A:J')}:append?valueInputOption=RAW`;
+  )}/values/${encodeURIComponent(CAMPAIGN_LOG_RANGE)}:append?valueInputOption=RAW`;
 
   const values = [[
     row.brief_id,
