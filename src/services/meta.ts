@@ -114,15 +114,31 @@ export class MetaApiError extends Error {
  * Prefers `error_user_msg` (the policy-rejection reason Meta surfaces to
  * advertisers) over the generic `message`.
  */
-export function parseMetaError(body: unknown): { message: string; code?: number } {
+export function parseMetaError(body: unknown): {
+  message: string;
+  code?: number;
+  subcode?: number;
+  fbtrace?: string;
+} {
   const err = (body as { error?: Record<string, unknown> })?.error;
   if (!err) return { message: 'Unknown Meta API error.' };
   const userMsg = typeof err.error_user_msg === 'string' ? err.error_user_msg : undefined;
   const message = typeof err.message === 'string' ? err.message : undefined;
   const title = typeof err.error_user_title === 'string' ? err.error_user_title : undefined;
   const code = typeof err.code === 'number' ? err.code : undefined;
+  const subcode = typeof err.error_subcode === 'number' ? err.error_subcode : undefined;
+  const fbtrace = typeof err.fbtrace_id === 'string' ? err.fbtrace_id : undefined;
   const best = userMsg ? (title ? `${title}: ${userMsg}` : userMsg) : message ?? 'Meta API error.';
-  return { message: best, code };
+  return { message: best, code, subcode, fbtrace };
+}
+
+/** Build a debuggable message with Meta's code/subcode/trace appended. */
+function metaErrorMessage(parsed: ReturnType<typeof parseMetaError>): string {
+  const bits: string[] = [];
+  if (parsed.code !== undefined) bits.push(`code ${parsed.code}`);
+  if (parsed.subcode !== undefined) bits.push(`subcode ${parsed.subcode}`);
+  if (parsed.fbtrace) bits.push(`trace ${parsed.fbtrace}`);
+  return bits.length ? `${parsed.message} (${bits.join(', ')})` : parsed.message;
 }
 
 interface MetaConfig {
@@ -202,6 +218,7 @@ async function graphPost(
   path: string,
   params: Record<string, unknown>,
   accessToken: string,
+  step = 'meta',
 ): Promise<Record<string, unknown>> {
   const form = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -216,8 +233,8 @@ async function graphPost(
   });
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
-    const { message, code } = parseMetaError(json);
-    throw new MetaApiError(message, res.status, code);
+    const parsed = parseMetaError(json);
+    throw new MetaApiError(`[${step}] ${metaErrorMessage(parsed)}`, res.status, parsed.code);
   }
   return json;
 }
@@ -253,6 +270,7 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
       bid_strategy: 'LOWEST_COST_WITHOUT_CAP', // autobid — no bid_amount required
     },
     accessToken,
+    'campaign',
   );
   const campaignId = String(campaign.id);
 
@@ -268,6 +286,7 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
       status: 'PAUSED',
     },
     accessToken,
+    'ad set',
   );
   const adSetId = String(adSet.id);
 
@@ -290,6 +309,7 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
       object_story_spec: { page_id: pageId, link_data: linkData },
     },
     accessToken,
+    'creative',
   );
   const creativeId = String(creative.id);
 
@@ -303,6 +323,7 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
       status: 'PAUSED',
     },
     accessToken,
+    'ad',
   );
   const adId = String(ad.id);
 
