@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { credentialsValid } from '../src/middleware/auth';
 import { parseImageHashResponse } from '../src/services/meta';
+import { parseConversionRows } from '../src/services/posthog';
 
 function basic(user: string, pass: string): string {
   return 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64');
@@ -31,4 +32,21 @@ test('parseImageHashResponse returns null when absent', () => {
   assert.equal(parseImageHashResponse({}), null);
   assert.equal(parseImageHashResponse({ images: {} }), null);
   assert.equal(parseImageHashResponse(null), null);
+});
+
+test('parseConversionRows maps PostHog rows to per-brief counts', () => {
+  const out = parseConversionRows([
+    ['brief-abc', 7, 3],
+    ['brief-xyz', 2, 0],
+    ['', 9, 9], // empty brief skipped
+    'not-an-array',
+  ]);
+  assert.deepEqual(out['brief-abc'], { trial_started: 7, trial_converted: 3 });
+  assert.deepEqual(out['brief-xyz'], { trial_started: 2, trial_converted: 0 });
+  assert.equal('' in out, false);
+});
+
+test('parseConversionRows handles non-array input', () => {
+  assert.deepEqual(parseConversionRows(null), {});
+  assert.deepEqual(parseConversionRows(undefined), {});
 });

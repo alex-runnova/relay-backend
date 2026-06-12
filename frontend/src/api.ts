@@ -94,6 +94,11 @@ export const api = {
 
   readiness: (id: string) => request<ReadinessResult>(`/briefs/${id}/readiness`),
 
+  conversions: () =>
+    request<{ configured: boolean; by_brief: Record<string, { trial_started: number; trial_converted: number }> }>(
+      '/conversions',
+    ),
+
   submit: (id: string) =>
     request<{ brief: Brief; meta_submission: MetaSubmission; permalink: string; campaign_logged: boolean }>(
       `/briefs/${id}/submit`,

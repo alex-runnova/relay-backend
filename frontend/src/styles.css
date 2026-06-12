@@ -112,6 +112,7 @@ a { color: var(--gold); }
 .brief-item.active { background: rgba(171,54,238,0.16); border-color: var(--gold); }
 .brief-item .name { font-size: 14px; font-weight: 600; }
 .brief-item .when { font-size: 11px; color: #9b958a; }
+.signups-badge { font-size: 11px; font-weight: 700; color: var(--cta-ink); background: var(--cta); align-self: flex-start; padding: 1px 7px; border-radius: 999px; margin-top: 2px; }
 
 /* Status badges */
 .badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
@@ -165,6 +166,12 @@ a { color: var(--gold); }
 /* Toast */
 .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; padding: 14px 18px; border-radius: 10px; box-shadow: var(--shadow); font-size: 14px; max-width: 360px; }
 .toast.error { background: var(--red); }
+
+/* Conversions card (Panel 4, submitted) */
+.conversions-card { display: flex; gap: 32px; align-items: center; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; }
+.conv-num { font-size: 28px; font-weight: 800; color: var(--gold); line-height: 1; }
+.conv-label { font-size: 12px; color: var(--ink-soft); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+.conv-note { font-size: 12px; color: var(--ink-soft); margin-left: auto; max-width: 220px; }
 
 /* Ad preview (Panel 4) */
 .ad-preview-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-soft); margin-bottom: 8px; }

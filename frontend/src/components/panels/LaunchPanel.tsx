@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Brief, ReadinessResult } from '../../types';
+import { Brief, Conversions, ReadinessResult } from '../../types';
 import { ApiError, api } from '../../api';
 import AdPreview from '../AdPreview';
 
 interface Props {
   brief: Brief;
+  conversions?: Conversions;
   onSubmitted: (brief: Brief, permalink: string, logged: boolean) => void;
   onBack: () => void;
   toast: (message: string, error?: boolean) => void;
 }
 
-export default function LaunchPanel({ brief, onSubmitted, onBack, toast }: Props) {
+export default function LaunchPanel({ brief, conversions, onSubmitted, onBack, toast }: Props) {
   const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -56,6 +57,17 @@ export default function LaunchPanel({ brief, onSubmitted, onBack, toast }: Props
         <h2>Launch Readiness</h2>
         <div className="banner ok">
           <strong>Submitted to Meta.</strong> This brief is locked. Clone it to make a new draft.
+        </div>
+        <div className="conversions-card">
+          <div>
+            <div className="conv-num">{conversions?.trial_started ?? 0}</div>
+            <div className="conv-label">Free-trial signups</div>
+          </div>
+          <div>
+            <div className="conv-num">{conversions?.trial_converted ?? 0}</div>
+            <div className="conv-label">Trial → paid</div>
+          </div>
+          <div className="conv-note">Attributed via PostHog (utm_term). Updates as signups come in.</div>
         </div>
         {brief.copy && (
           <div style={{ marginBottom: 24 }}>

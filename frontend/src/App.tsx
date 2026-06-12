@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Brief, HARD_BLOCK_FLAGS, MIN_COMPLIANCE_SCORE } from './types';
+import { Brief, ConversionsByBrief, HARD_BLOCK_FLAGS, MIN_COMPLIANCE_SCORE } from './types';
 import { ApiError, api } from './api';
 import Sidebar from './components/Sidebar';
 import StatusBar from './components/StatusBar';
@@ -33,6 +33,16 @@ export default function App() {
   const [active, setActive] = useState<Brief | null>(null);
   const [panel, setPanel] = useState(1);
   const [toast, setToast] = useState<{ message: string; error?: boolean } | null>(null);
+  const [conversions, setConversions] = useState<ConversionsByBrief>({});
+
+  const refreshConversions = useCallback(async () => {
+    try {
+      const r = await api.conversions();
+      if (r.configured) setConversions(r.by_brief);
+    } catch {
+      /* conversions are best-effort; never block the UI */
+    }
+  }, []);
 
   const showToast = useCallback((message: string, error = false) => {
     setToast({ message, error });
@@ -49,7 +59,8 @@ export default function App() {
 
   useEffect(() => {
     refreshList();
-  }, [refreshList]);
+    refreshConversions();
+  }, [refreshList, refreshConversions]);
 
   const next = () => setPanel((p) => Math.min(4, p + 1));
   const back = () => setPanel((p) => Math.max(1, p - 1));
@@ -121,6 +132,7 @@ export default function App() {
     content = (
       <LaunchPanel
         brief={active}
+        conversions={conversions[active.id]}
         onBack={back}
         toast={showToast}
         onSubmitted={(b, permalink, logged) => {
@@ -136,7 +148,7 @@ export default function App() {
 
   return (
     <div className="shell">
-      <Sidebar briefs={briefs} activeId={active?.id ?? null} onSelect={selectBrief} onNew={newBrief} />
+      <Sidebar briefs={briefs} activeId={active?.id ?? null} onSelect={selectBrief} onNew={newBrief} conversions={conversions} />
       <div className="main">
         <StatusBar brief={active} onClone={cloneActive} />
         <ProgressIndicator current={panel} onJump={setPanel} maxReachable={maxReachable(active)} />

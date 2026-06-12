@@ -1,10 +1,11 @@
-import { Brief } from '../types';
+import { Brief, ConversionsByBrief } from '../types';
 
 interface Props {
   briefs: Brief[];
   activeId: string | null;
   onSelect: (brief: Brief) => void;
   onNew: () => void;
+  conversions: ConversionsByBrief;
 }
 
 function relativeTime(iso: string): string {
@@ -18,7 +19,7 @@ function relativeTime(iso: string): string {
 }
 
 /** Persistent left-side brief history, sorted by last modified (backend order). */
-export default function Sidebar({ briefs, activeId, onSelect, onNew }: Props) {
+export default function Sidebar({ briefs, activeId, onSelect, onNew, conversions }: Props) {
   return (
     <aside className="sidebar">
       <div>
@@ -42,6 +43,9 @@ export default function Sidebar({ briefs, activeId, onSelect, onNew }: Props) {
               {'  '}
               {relativeTime(b.last_modified)}
             </span>
+            {conversions[b.id]?.trial_started ? (
+              <span className="signups-badge">★ {conversions[b.id].trial_started} signups</span>
+            ) : null}
           </button>
         ))}
       </div>

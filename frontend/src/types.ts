@@ -133,5 +133,11 @@ export interface ReadinessResult {
   failures: string[];
 }
 
+export interface Conversions {
+  trial_started: number;
+  trial_converted: number;
+}
+export type ConversionsByBrief = Record<string, Conversions>;
+
 export const HARD_BLOCK_FLAGS = ['INCOME_CLAIM', 'HEALTH_OUTCOME_CLAIM', 'DISCRIMINATORY_TARGETING'];
 export const MIN_COMPLIANCE_SCORE = 60;

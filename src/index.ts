@@ -14,6 +14,7 @@ import copyRouter from './routes/copy';
 import assetsRouter from './routes/assets';
 import launchRouter from './routes/launch';
 import strategyRouter from './routes/strategy';
+import conversionsRouter from './routes/conversions';
 import { basicAuth } from './middleware/auth';
 
 const app = express();
@@ -66,6 +67,7 @@ app.use('/api/briefs', copyRouter);
 app.use('/api/briefs', launchRouter);
 app.use('/api', assetsRouter);
 app.use('/api', strategyRouter);
+app.use('/api', conversionsRouter);
 
 // 404 for unknown API routes (must precede the SPA fallback).
 app.use('/api', (_req, res) => {
