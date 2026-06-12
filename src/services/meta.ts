@@ -229,7 +229,7 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
   const campaignName = `${brief.brief_name} — ${brief.city}`;
   const opt = mapOptimization(brief.objective);
 
-  // 1. Campaign
+  // 1. Campaign (budget lives here — CBO; avoids the ad-set budget-sharing field)
   const campaign = await graphPost(
     `${accountId}/campaigns`,
     {
@@ -237,23 +237,21 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
       objective: mapObjective(brief.objective),
       status: 'PAUSED',
       special_ad_categories: metaSpecialAdCategories(brief.industry),
+      daily_budget: usdToCents(brief.daily_budget_usd),
     },
     accessToken,
   );
   const campaignId = String(campaign.id);
 
-  // 2. Ad set (daily budget in cents, objective-aware optimization, targeting)
+  // 2. Ad set (no budget — inherited from the CBO campaign)
   const adSet = await graphPost(
     `${accountId}/adsets`,
     {
       name: `${campaignName} — Ad Set`,
       campaign_id: campaignId,
-      daily_budget: usdToCents(brief.daily_budget_usd),
       billing_event: opt.billing_event,
       optimization_goal: opt.optimization_goal,
       targeting: { geo_locations: { countries: ['US'] } },
-      // Required by Meta for ad-set-level (ABO) budgets; false = no sharing.
-      is_adset_budget_sharing_enabled: false,
       status: 'PAUSED',
     },
     accessToken,
