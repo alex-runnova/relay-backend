@@ -252,6 +252,8 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
       billing_event: opt.billing_event,
       optimization_goal: opt.optimization_goal,
       targeting: { geo_locations: { countries: ['US'] } },
+      // Required by Meta for ad-set-level (ABO) budgets; false = no sharing.
+      is_adset_budget_sharing_enabled: false,
       status: 'PAUSED',
     },
     accessToken,
