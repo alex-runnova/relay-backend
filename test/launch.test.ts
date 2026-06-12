@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { Brief } from '../src/types/brief';
 import { checkReadiness } from '../src/types/readiness';
 import {
+  buildTrackedUrl,
   mapObjective,
   mapOptimization,
   metaSpecialAdCategories,
@@ -155,4 +156,22 @@ test('mapOptimization returns a setup-free combo per objective', () => {
   assert.deepEqual(mapOptimization('AWARENESS'), { optimization_goal: 'REACH', billing_event: 'IMPRESSIONS' });
   assert.deepEqual(mapOptimization('TRAFFIC'), { optimization_goal: 'LINK_CLICKS', billing_event: 'IMPRESSIONS' });
   assert.equal(mapOptimization('CONVERSIONS').optimization_goal, 'LINK_CLICKS');
+});
+
+test('buildTrackedUrl appends UTM params for attribution', () => {
+  const url = buildTrackedUrl({ ...readyBrief(), messaging_angle: 'time_relief', destination_url: 'https://www.run-relay.com/time' });
+  const parsed = new URL(url);
+  assert.equal(parsed.searchParams.get('utm_source'), 'facebook');
+  assert.equal(parsed.searchParams.get('utm_medium'), 'paid_social');
+  assert.equal(parsed.searchParams.get('utm_content'), 'time_relief');
+  assert.equal(parsed.searchParams.get('utm_campaign'), 'spring'); // from "Spring"
+  assert.equal(parsed.searchParams.get('utm_term'), 'b1'); // brief id
+});
+
+test('buildTrackedUrl preserves existing query params and defaults angle', () => {
+  const url = buildTrackedUrl({ ...readyBrief(), messaging_angle: undefined, destination_url: 'https://www.run-relay.com/time?ref=abc&utm_source=keep' });
+  const parsed = new URL(url);
+  assert.equal(parsed.searchParams.get('ref'), 'abc');
+  assert.equal(parsed.searchParams.get('utm_source'), 'keep'); // not overwritten
+  assert.equal(parsed.searchParams.get('utm_content'), 'unspecified');
 });

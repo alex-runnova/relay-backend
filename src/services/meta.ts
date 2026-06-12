@@ -70,6 +70,33 @@ export function normalizeAccountId(id: string): string {
   return trimmed.startsWith('act_') ? trimmed : `act_${trimmed}`;
 }
 
+function slugify(s: string): string {
+  return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'campaign';
+}
+
+/**
+ * Append UTM parameters to the destination URL so PostHog can attribute
+ * `trial_started` conversions back to the brief, campaign, and angle. Existing
+ * query params the user added are preserved (never overwritten). Returns the
+ * original string unchanged if it isn't a valid URL.
+ */
+export function buildTrackedUrl(brief: Brief): string {
+  try {
+    const url = new URL(brief.destination_url);
+    const set = (k: string, v: string) => {
+      if (!url.searchParams.has(k)) url.searchParams.set(k, v);
+    };
+    set('utm_source', 'facebook');
+    set('utm_medium', 'paid_social');
+    set('utm_campaign', slugify(brief.brief_name));
+    set('utm_content', brief.messaging_angle ?? 'unspecified');
+    set('utm_term', brief.id); // exact per-brief attribution
+    return url.toString();
+  } catch {
+    return brief.destination_url;
+  }
+}
+
 /** A Meta policy/validation rejection, carrying the surfaced reason. */
 export class MetaApiError extends Error {
   readonly status: number;
@@ -236,7 +263,7 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
   // back to the asset URL if the upload fails.
   const imageHash = await uploadAdImage(accountId, accessToken, asset.file_url);
   const linkData: Record<string, unknown> = {
-    link: brief.destination_url,
+    link: buildTrackedUrl(brief), // UTM-tagged for PostHog conversion attribution
     message: copy.primary_text,
     name: copy.headline,
     description: copy.description,
