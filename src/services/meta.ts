@@ -238,6 +238,7 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
       status: 'PAUSED',
       special_ad_categories: metaSpecialAdCategories(brief.industry),
       daily_budget: usdToCents(brief.daily_budget_usd),
+      bid_strategy: 'LOWEST_COST_WITHOUT_CAP', // autobid — no bid_amount required
     },
     accessToken,
   );
