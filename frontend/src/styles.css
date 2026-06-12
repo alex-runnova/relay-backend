@@ -166,6 +166,23 @@ a { color: var(--gold); }
 .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; padding: 14px 18px; border-radius: 10px; box-shadow: var(--shadow); font-size: 14px; max-width: 360px; }
 .toast.error { background: var(--red); }
 
+/* Ad preview (Panel 4) */
+.ad-preview-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-soft); margin-bottom: 8px; }
+.ad-card { background: #fff; border: 1px solid #dcdce1; border-radius: 10px; overflow: hidden; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #050505; }
+.ad-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px; }
+.ad-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--gold); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 16px; }
+.ad-avatar.ig { background: linear-gradient(45deg, #f09433, #dc2743, #bc1888); }
+.ad-page { font-size: 13px; font-weight: 600; }
+.ad-sponsored { font-size: 11px; color: #65676b; }
+.ad-primary { padding: 0 12px 10px; font-size: 14px; line-height: 1.4; white-space: pre-wrap; }
+.ad-linkbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #f0f2f5; padding: 10px 12px; }
+.ad-domain { font-size: 11px; color: #65676b; text-transform: uppercase; letter-spacing: 0.3px; }
+.ad-headline { font-size: 15px; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }
+.ad-desc { font-size: 12px; color: #65676b; }
+.ad-cta { flex-shrink: 0; background: #e4e6eb; color: #050505; border: none; border-radius: 6px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: default; }
+.ad-cta-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #fafafa; border-top: 1px solid #efefef; font-size: 14px; font-weight: 600; color: #0095f6; }
+.ad-ig-caption { padding: 8px 12px; font-size: 13px; line-height: 1.4; }
+
 .empty-state { color: var(--ink-soft); text-align: center; padding: 60px 20px; }
 .spinner { color: var(--ink-soft); font-size: 14px; padding: 12px 0; }
 .locked-note { background: var(--gold-soft); color: var(--gold); padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 18px; }

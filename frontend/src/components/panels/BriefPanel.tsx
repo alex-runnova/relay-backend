@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  ANGLE_LANDING_URLS,
   Brief,
   BriefInput,
   CAMPAIGN_OBJECTIVES,
@@ -7,6 +8,7 @@ import {
   MESSAGING_ANGLE_LABELS,
   MESSAGING_ANGLES,
   MIN_DAILY_BUDGET_USD,
+  MessagingAngle,
   TONES,
 } from '../../types';
 import { ApiError, api } from '../../api';
@@ -76,6 +78,20 @@ export default function BriefPanel({ brief, readOnly, onSaved, onNext, toast }: 
 
   const set = <K extends keyof BriefInput>(k: K, val: BriefInput[K]) =>
     setForm((f) => ({ ...f, [k]: val }));
+
+  // Selecting an angle auto-fills its landing page — but never clobbers a
+  // custom URL the user typed (only fills if empty or still an angle URL).
+  const pickAngle = (angle: MessagingAngle | undefined) =>
+    setForm((f) => {
+      const isAngleUrl =
+        !f.destination_url ||
+        Object.values(ANGLE_LANDING_URLS).includes(f.destination_url);
+      return {
+        ...f,
+        messaging_angle: angle,
+        destination_url: angle && isAngleUrl ? ANGLE_LANDING_URLS[angle] : f.destination_url,
+      };
+    });
 
   const fieldClass = (k: keyof BriefInput) => `field ${touched && errors[k] ? 'invalid' : ''}`;
   const err = (k: keyof BriefInput) => touched && errors[k] && <div className="error">{errors[k]}</div>;
@@ -207,7 +223,7 @@ export default function BriefPanel({ brief, readOnly, onSaved, onNext, toast }: 
       <div className="field">
         <label>Messaging Angle <span className="hint">optional — steers the copy; pair with its landing page below</span></label>
         <select value={form.messaging_angle ?? ''} disabled={readOnly}
-          onChange={(e) => set('messaging_angle', (e.target.value || undefined) as BriefInput['messaging_angle'])}>
+          onChange={(e) => pickAngle((e.target.value || undefined) as MessagingAngle | undefined)}>
           <option value="">Let Relay choose the best fit</option>
           {MESSAGING_ANGLES.map((a) => <option key={a} value={a}>{MESSAGING_ANGLE_LABELS[a]}</option>)}
         </select>

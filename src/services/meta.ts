@@ -240,7 +240,7 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
     message: copy.primary_text,
     name: copy.headline,
     description: copy.description,
-    call_to_action: { type: 'LEARN_MORE' },
+    call_to_action: { type: 'SIGN_UP' }, // Relay's goal is free-trial signups
     ...(imageHash ? { image_hash: imageHash } : { picture: asset.file_url }),
   };
   const creative = await graphPost(

@@ -39,6 +39,12 @@ export const MESSAGING_ANGLE_LABELS: Record<MessagingAngle, string> = {
   time_relief: "You don't have time. We do",
   value: 'Easier & cheaper than you think',
 };
+/** Each angle maps to its own landing page (auto-populates Destination URL). */
+export const ANGLE_LANDING_URLS: Record<MessagingAngle, string> = {
+  social_proof: 'https://www.run-relay.com/peers',
+  time_relief: 'https://www.run-relay.com/time',
+  value: 'https://www.run-relay.com/value',
+};
 
 export const COPY_LIMITS = { headline: 40, primary_text: 125, description: 30 } as const;
 export const MIN_DAILY_BUDGET_USD = 5;

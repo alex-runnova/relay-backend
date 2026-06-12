@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Brief, ReadinessResult } from '../../types';
 import { ApiError, api } from '../../api';
+import AdPreview from '../AdPreview';
 
 interface Props {
   brief: Brief;
@@ -56,6 +57,11 @@ export default function LaunchPanel({ brief, onSubmitted, onBack, toast }: Props
         <div className="banner ok">
           <strong>Submitted to Meta.</strong> This brief is locked. Clone it to make a new draft.
         </div>
+        {brief.copy && (
+          <div style={{ marginBottom: 24 }}>
+            <AdPreview copy={brief.copy} asset={brief.selected_asset} destinationUrl={brief.destination_url} />
+          </div>
+        )}
         <div className="copy-field">
           <div className="row"><label>Meta Ad ID</label></div>
           <div>{sub.ad_id}</div>
@@ -83,6 +89,13 @@ export default function LaunchPanel({ brief, onSubmitted, onBack, toast }: Props
     <div className="panel">
       <h2>Launch Readiness</h2>
       <p className="subtitle">Final validation before submitting a PAUSED ad to Meta.</p>
+
+      {brief.copy && (
+        <div style={{ marginBottom: 24 }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>Ad preview</h3>
+          <AdPreview copy={brief.copy} asset={brief.selected_asset} destinationUrl={brief.destination_url} />
+        </div>
+      )}
 
       {loading && <div className="spinner">Running checks…</div>}
 
