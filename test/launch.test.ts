@@ -9,6 +9,7 @@ import {
   metaSpecialAdCategories,
   normalizeAccountId,
   parseMetaError,
+  toFetchableImageUrl,
   usdToCents,
 } from '../src/services/meta';
 
@@ -144,6 +145,19 @@ test('parseMetaError prefers error_user_msg', () => {
 
 test('parseMetaError falls back to message', () => {
   assert.equal(parseMetaError({ error: { message: 'Invalid budget' } }).message, 'Invalid budget');
+});
+
+test('toFetchableImageUrl converts Drive view links to the thumbnail endpoint', () => {
+  assert.equal(
+    toFetchableImageUrl('https://drive.google.com/uc?export=view&id=ABC123'),
+    'https://drive.google.com/thumbnail?id=ABC123&sz=w1600',
+  );
+  assert.equal(
+    toFetchableImageUrl('https://drive.google.com/file/d/XYZ789/view'),
+    'https://drive.google.com/thumbnail?id=XYZ789&sz=w1600',
+  );
+  // Non-Drive URLs pass through unchanged
+  assert.equal(toFetchableImageUrl('https://cdn.example.com/a.jpg'), 'https://cdn.example.com/a.jpg');
 });
 
 test('metaSpecialAdCategories maps real estate to HOUSING only', () => {

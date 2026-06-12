@@ -155,6 +155,18 @@ export function parseImageHashResponse(body: unknown): string | null {
 }
 
 /**
+ * Convert a Google Drive share/view URL into one that actually serves image
+ * bytes to a server-side fetch (and to Meta). Drive's `uc?export=view` links
+ * return an HTML interstitial, not the image — the thumbnail endpoint serves a
+ * real JPEG. Non-Drive URLs are returned unchanged.
+ */
+export function toFetchableImageUrl(url: string): string {
+  if (!url.includes('drive.google.com')) return url;
+  const m = url.match(/(?:\/d\/|[?&]id=)([a-zA-Z0-9_-]+)/);
+  return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1600` : url;
+}
+
+/**
  * Upload an image to the ad account by fetching its bytes from `imageUrl` and
  * POSTing to /adimages, returning the resulting image_hash. Meta creatives are
  * far more reliable with an uploaded image_hash than a raw picture URL. Returns
@@ -166,13 +178,13 @@ export async function uploadAdImage(
   imageUrl: string,
 ): Promise<string | null> {
   try {
-    const imgRes = await fetch(imageUrl);
+    const imgRes = await fetch(toFetchableImageUrl(imageUrl));
     if (!imgRes.ok) return null;
     const bytes = Buffer.from(await imgRes.arrayBuffer());
 
     const form = new FormData();
     form.set('access_token', accessToken);
-    form.set('source', new Blob([bytes]), 'asset');
+    form.set('source', new Blob([bytes], { type: 'image/jpeg' }), 'image.jpg');
 
     const res = await fetch(`${GRAPH_BASE}/${accountId}/adimages`, {
       method: 'POST',
@@ -269,7 +281,7 @@ export async function createPausedAd(brief: Brief): Promise<MetaSubmission> {
     name: copy.headline,
     description: copy.description,
     call_to_action: { type: 'SIGN_UP' }, // Relay's goal is free-trial signups
-    ...(imageHash ? { image_hash: imageHash } : { picture: asset.file_url }),
+    ...(imageHash ? { image_hash: imageHash } : { picture: toFetchableImageUrl(asset.file_url) }),
   };
   const creative = await graphPost(
     `${accountId}/adcreatives`,
